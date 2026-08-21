@@ -1,27 +1,45 @@
 # Namma Metro Tracker v3.0
 
-Bengaluru Namma Metro Android app with offline route planning for the operational Purple, Green and Yellow lines.
+A lightweight Android app for planning and tracking journeys on Bengaluru Namma Metro.
 
-## v3 additions
-- Dependency-free schematic network map.
-- Official BMRCL service/timing shortcut.
-- Google Maps shortcut.
-- Favourite-start shortcut.
-- Station information dialog with line/interchange details.
-- Route planning, transfer detection, fare estimate and station-by-station trip tracker.
+## Features
 
-## How to get the APK without Android Studio
-You do **not** need Android Studio on your computer.
+- Purple, Green and Yellow operational lines
+- Station search
+- Origin/destination route planning
+- Interchange detection
+- Stop count and journey-time estimate
+- Fare estimate
+- From/To swap
+- Favourite starting station
+- Station information
+- Schematic metro network map
+- Station-by-station trip tracker
+- Share journey
+- Google Maps shortcut
+- Official BMRCL service-information shortcut
+- Core route planning without an account
 
-1. Create a GitHub repository in your browser.
-2. Upload the contents of this folder to the repository (not the zip file inside the repo).
-3. Open the repository's **Actions** tab.
-4. Select **Build Namma Metro Tracker APK**.
-5. Click **Run workflow**.
-6. After it finishes, open the workflow run and download the artifact named `Namma-Metro-Tracker-v3-debug-apk`.
-7. Extract the downloaded artifact and install `app-debug.apk` on your Android phone.
+## Build without Android Studio
 
-GitHub-hosted runners provide the build machine, and the included workflow installs the Android SDK packages and Gradle automatically.
+This repository includes a GitHub Actions workflow that builds the debug APK on a GitHub-hosted runner. No Android Studio, Android SDK, Gradle, or Java installation is required on your computer.
 
-## Important
-This is an independent app, not an official BMRCL app. Live train-position data is not included because a documented public train-position API was not established. Official BMRCL service information can be opened from inside the app.
+1. Open the **Actions** tab.
+2. Select **Build Namma Metro Tracker APK**.
+3. Choose **Run workflow**.
+4. Wait for the workflow to finish.
+5. Open the completed run.
+6. Download the `Namma-Metro-Tracker-v3-debug-apk` artifact.
+7. Extract it and install `app-debug.apk` on your Android device.
+
+## Live data
+
+This release does not fabricate live train positions or arrival predictions. A documented public BMRCL train-position API has not been established. The app provides official BMRCL information shortcuts instead.
+
+## Disclaimer
+
+This is an independent application and is not affiliated with or endorsed by Bangalore Metro Rail Corporation Limited (BMRCL). Timings, fares, routes and service conditions may change. Verify critical travel information with official BMRCL sources before travelling.
+
+## License
+
+MIT License. See `LICENSE`.
