@@ -3,7 +3,9 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path(__file__).with_name('metro_admin.db')
+DATA_DIR = Path(__import__('os').environ.get('METRO_DATA_DIR', str(Path(__file__).with_name('data'))))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA_DIR / 'metro_admin.db'
 DEFAULT_CONFIG = {
     'version': 1,
     'updated_at': datetime.now(timezone.utc).isoformat(),
