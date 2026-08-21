@@ -1,12 +1,10 @@
-import json
 import os
-from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from .store import load_config, save_config
+from store import load_config, save_config
 
 router = APIRouter()
 security = HTTPBasic()
@@ -33,8 +31,7 @@ let cfg;
 const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
 async function getCfg(){const r=await fetch('/api/config');cfg=await r.json();render();}
 function render(){let h='<section><h2>Service notice</h2><label>NOTICE</label><textarea id="notice">'+esc(cfg.notice||'')+'</textarea><button class="primary" onclick="save()">SAVE ALL CHANGES</button><button onclick="location.reload()">RESET</button></section>';
-h+='<section><h2>Lines & timings</h2>';
-for(const [key,line] of Object.entries(cfg.lines||{})){h+='<div class="row"><div><label>'+esc(line.name)+' FIRST TRAIN</label><input id="first_'+key+'" value="'+esc(line.first_train)+'"></div><div><label>'+esc(line.name)+' LAST TRAIN</label><input id="last_'+key+'" value="'+esc(line.last_train)+'"></div></div>'}
+h+='<section><h2>Lines & timings</h2>';for(const [key,line] of Object.entries(cfg.lines||{})){h+='<div class="row"><div><label>'+esc(line.name)+' FIRST TRAIN</label><input id="first_'+key+'" value="'+esc(line.first_train)+'"></div><div><label>'+esc(line.name)+' LAST TRAIN</label><input id="last_'+key+'" value="'+esc(line.last_train)+'"></div></div>'}
 h+='</section><section><h2>Fare slabs</h2><p class="muted">Enter distance in km and fare in INR.</p>';for(let i=0;i<(cfg.fares||[]).length;i++){const f=cfg.fares[i];h+='<div class="row"><div><label>MAX KM</label><input id="km_'+i+'" type="number" step="0.1" value="'+esc(f.max_km)+'"></div><div><label>FARE ₹</label><input id="fare_'+i+'" type="number" step="1" value="'+esc(f.fare)+'"></div></div>'}h+='</section><section><h2>App version</h2><p>Configuration version: <b>'+esc(cfg.version)+'</b> • Updated: '+esc(cfg.updated_at)+'</p></section>';document.getElementById('app').innerHTML=h;}
 async function save(){for(const [key,line] of Object.entries(cfg.lines)){line.first_train=document.getElementById('first_'+key).value;line.last_train=document.getElementById('last_'+key).value}for(let i=0;i<cfg.fares.length;i++){cfg.fares[i].max_km=Number(document.getElementById('km_'+i).value);cfg.fares[i].fare=Number(document.getElementById('fare_'+i).value)}cfg.notice=document.getElementById('notice').value;const r=await fetch('/api/admin/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});if(!r.ok){alert('Save failed');return}cfg=await r.json();render();alert('Saved. New config version: '+cfg.version)}
 getCfg();
