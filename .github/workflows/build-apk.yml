@@ -3,7 +3,7 @@ name: Build Namma Metro Tracker APK
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches: ["main", "v4-ui-ux-redesign"]
 
 jobs:
   build:
@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -26,7 +26,7 @@ jobs:
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: "8.9"
 
@@ -36,5 +36,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Namma-Metro-Tracker-v3-debug-apk
+          name: Namma-Metro-Tracker-v4-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
