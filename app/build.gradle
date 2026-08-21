@@ -1,0 +1,5 @@
+plugins { id 'com.android.application' }
+
+android { namespace 'com.namma.metrotracker'; compileSdk 35
+    defaultConfig { applicationId 'com.namma.metrotracker'; minSdk 24; targetSdk 35; versionCode 3; versionName '3.0.0' }
+}

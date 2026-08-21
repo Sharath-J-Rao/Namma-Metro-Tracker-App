@@ -1,0 +1,7 @@
+<resources>
+    <color name="purple_line">#6A1B9A</color>
+    <color name="green_line">#2E7D32</color>
+    <color name="yellow_line">#F9A825</color>
+    <color name="dark_text">#17202A</color>
+    <color name="light_bg">#F5F7FA</color>
+</resources>
