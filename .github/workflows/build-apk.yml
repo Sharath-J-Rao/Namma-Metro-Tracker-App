@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: ["main", "v4-ui-ux-redesign", "gtfs-iudx-v6", "v7-admin-config"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   build:
