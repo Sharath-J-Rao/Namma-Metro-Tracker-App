@@ -1,65 +1,59 @@
-# Namma Metro Tracker v6 backend
+# Namma Metro Tracker v7 backend
 
-This backend is the secure bridge between the Android app and official/static transit data.
+This is the optional remote configuration server for the Android app. It does **not** require IUDX.
 
-## Data flow
+## What it does
 
-```text
-Official GTFS ZIP ───────┐
-                         ├──> FastAPI ───> Android app
-Authorized IUDX / GTFS-RT ┘       │
-                                  ├── static stations/routes
-                                  ├── fare/journey calculations
-                                  └── live vehicles/trip updates
-```
+- Stores fares, line timings, headways, stations and service notices in SQLite.
+- Serves `/api/config` for the Android app.
+- Provides a protected `/admin` web panel.
+- Increments a configuration version every time you save changes.
+- The Android app caches the last successful configuration and works offline.
 
-IUDX requires consumer registration/authentication for secure resource access, so the IUDX token is kept on this server and is never shipped inside the APK. citeturn807592search3turn514859search5
+## Run on Windows
 
-## Run locally
-
-```bash
-python -m venv .venv
-.venv\\Scripts\\activate
+```powershell
+cd backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-Linux/macOS activation:
-
-```bash
-source .venv/bin/activate
-```
-
-## Static GTFS
-
-Place the authorized Namma Metro GTFS ZIP at:
+Open the admin panel:
 
 ```text
-backend/data/namma_metro_gtfs.zip
+http://YOUR-PC-IP:8000/admin
 ```
 
-The service reads `routes.txt`, `stops.txt`, `trips.txt`, and `stop_times.txt`. The embedded line data is retained only as a fallback so the APK can still be demonstrated without the GTFS feed.
+The browser will ask for the username/password defined in `.env`.
 
-IUDX documentation describes file access and API access after a resource has been discovered and an appropriate access token obtained. citeturn514859search3turn514859search5
+## Environment
 
-## Live GTFS-Realtime
-
-Set these backend-only variables in `.env` after the authorized IUDX resource and feed endpoint are known:
+Set at least:
 
 ```text
-IUDX_GTFS_RT_URL=...
-IUDX_TOKEN=...
+ADMIN_USER=admin
+ADMIN_PASSWORD=change-this-to-a-strong-password
 ```
 
-The backend decodes GTFS-Realtime vehicle positions and trip updates using `gtfs-realtime-bindings`.
+Do not commit `.env` or real passwords to GitHub.
 
-## Android connection
+## Android
 
-The APK can run in offline fallback mode. To use the backend, set the API URL in the app's **Data source** control, for example:
+In the app, tap **BACKEND** and enter the server URL, for example:
 
 ```text
 http://192.168.1.50:8000
 ```
 
-Use the LAN IP of the computer/server running this backend when the phone and server are on the same network.
+The phone and server must be reachable on the same LAN. The APK will sync the latest configuration and keep the last successful configuration locally if the server is unavailable.
+
+## Cloud deployment
+
+Deploy the `backend` directory to any Python/FastAPI host. Set `ADMIN_USER` and `ADMIN_PASSWORD` as platform secrets/environment variables. Give the Android app the HTTPS URL of that service.
+
+## Security
+
+The Android app only reads `/api/config`. Administrative writes require HTTP Basic authentication. Use HTTPS in production. Do not expose the backend management endpoint directly to the public internet without a strong password and TLS.
