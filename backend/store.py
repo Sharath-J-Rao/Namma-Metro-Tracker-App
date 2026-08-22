@@ -1,11 +1,14 @@
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-DATA_DIR = Path(__import__('os').environ.get('METRO_DATA_DIR', str(Path(__file__).with_name('data'))))
+DATABASE_URL = os.getenv('DATABASE_URL', '').strip()
+DATA_DIR = Path(os.getenv('METRO_DATA_DIR', str(Path(__file__).with_name('data')))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA_DIR / 'metro_admin.db'
+SQLITE_PATH = DATA_DIR / 'metro_admin.db'
+
 DEFAULT_CONFIG = {
     'version': 1,
     'updated_at': datetime.now(timezone.utc).isoformat(),
@@ -23,27 +26,98 @@ DEFAULT_CONFIG = {
 }
 
 
+def _is_postgres():
+    return DATABASE_URL.startswith(('postgres://', 'postgresql://'))
+
+
+def validate_config(config):
+    if not isinstance(config, dict) or not isinstance(config.get('lines'), dict) or not isinstance(config.get('fares'), list):
+        raise ValueError('Invalid configuration structure')
+    previous = 0.0
+    for slab in config['fares']:
+        max_km = float(slab['max_km'])
+        fare = int(slab['fare'])
+        if max_km <= previous or fare < 0:
+            raise ValueError('Fare slabs must have increasing distance limits and non-negative fares')
+        previous = max_km
+    for line in config['lines'].values():
+        if not line.get('name') or not line.get('stations') or not line.get('first_train') or not line.get('last_train'):
+            raise ValueError('Every line needs a name, stations, first train and last train')
+        if int(line.get('headway_min', 0)) <= 0:
+            raise ValueError('Headway must be positive')
+    return config
+
+
+def _sqlite_connection():
+    return sqlite3.connect(SQLITE_PATH)
+
+
 def init_db():
-    with sqlite3.connect(DB_PATH) as db:
+    if _is_postgres():
+        import psycopg
+        with psycopg.connect(DATABASE_URL) as db:
+            with db.cursor() as cur:
+                cur.execute('CREATE TABLE IF NOT EXISTS metro_config (id INTEGER PRIMARY KEY, version INTEGER NOT NULL, updated_at TEXT NOT NULL, payload JSONB NOT NULL)')
+                cur.execute('CREATE TABLE IF NOT EXISTS metro_config_history (id BIGSERIAL PRIMARY KEY, version INTEGER NOT NULL, updated_at TEXT NOT NULL, payload JSONB NOT NULL, changed_by TEXT NOT NULL DEFAULT \'system\')')
+                cur.execute('SELECT 1 FROM metro_config WHERE id=1')
+                if cur.fetchone() is None:
+                    cur.execute('INSERT INTO metro_config (id,version,updated_at,payload) VALUES (1,%s,%s,%s)', (DEFAULT_CONFIG['version'], DEFAULT_CONFIG['updated_at'], json.dumps(DEFAULT_CONFIG)))
+            db.commit()
+        return
+    with _sqlite_connection() as db:
+        db.execute('CREATE TABLE IF NOT EXISTS metro_config (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL)')
+        db.execute('CREATE TABLE IF NOT EXISTS metro_config_history (id INTEGER PRIMARY KEY AUTOINCREMENT, version INTEGER NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL, changed_by TEXT NOT NULL DEFAULT \'system\')')
         db.execute('CREATE TABLE IF NOT EXISTS config (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL)')
-        if db.execute('SELECT 1 FROM config WHERE id=1').fetchone() is None:
-            db.execute('INSERT INTO config VALUES (1, ?, ?, ?)', (DEFAULT_CONFIG['version'], DEFAULT_CONFIG['updated_at'], json.dumps(DEFAULT_CONFIG, separators=(',', ':'))))
+        row = db.execute('SELECT 1 FROM metro_config WHERE id=1').fetchone()
+        if row is None:
+            db.execute('INSERT INTO metro_config VALUES (1, ?, ?, ?)', (DEFAULT_CONFIG['version'], DEFAULT_CONFIG['updated_at'], json.dumps(DEFAULT_CONFIG, separators=(',', ':'))))
         db.commit()
 
 
 def load_config():
     init_db()
-    with sqlite3.connect(DB_PATH) as db:
-        row = db.execute('SELECT payload FROM config WHERE id=1').fetchone()
+    if _is_postgres():
+        import psycopg
+        with psycopg.connect(DATABASE_URL) as db:
+            with db.cursor() as cur:
+                cur.execute('SELECT payload FROM metro_config WHERE id=1')
+                row = cur.fetchone()
+        return row[0]
+    with _sqlite_connection() as db:
+        row = db.execute('SELECT payload FROM metro_config WHERE id=1').fetchone()
     return json.loads(row[0])
 
 
-def save_config(config):
+def save_config(config, changed_by='admin'):
+    validate_config(config)
     current = load_config()
     config = dict(config)
     config['version'] = int(current.get('version', 0)) + 1
     config['updated_at'] = datetime.now(timezone.utc).isoformat()
-    with sqlite3.connect(DB_PATH) as db:
-        db.execute('UPDATE config SET version=?, updated_at=?, payload=? WHERE id=1', (config['version'], config['updated_at'], json.dumps(config, separators=(',', ':'))))
+    payload = json.dumps(config, separators=(',', ':'))
+    if _is_postgres():
+        import psycopg
+        with psycopg.connect(DATABASE_URL) as db:
+            with db.cursor() as cur:
+                cur.execute('INSERT INTO metro_config_history(version,updated_at,payload,changed_by) VALUES (%s,%s,%s,%s)', (config['version'], config['updated_at'], payload, changed_by))
+                cur.execute('UPDATE metro_config SET version=%s,updated_at=%s,payload=%s WHERE id=1', (config['version'], config['updated_at'], payload))
+            db.commit()
+        return config
+    with _sqlite_connection() as db:
+        db.execute('INSERT INTO metro_config_history(version,updated_at,payload,changed_by) VALUES (?,?,?,?)', (config['version'], config['updated_at'], payload, changed_by))
+        db.execute('UPDATE metro_config SET version=?,updated_at=?,payload=? WHERE id=1', (config['version'], config['updated_at'], payload))
         db.commit()
     return config
+
+
+def history(limit=20):
+    init_db()
+    if _is_postgres():
+        import psycopg
+        with psycopg.connect(DATABASE_URL) as db:
+            with db.cursor() as cur:
+                cur.execute('SELECT version,updated_at,changed_by,payload FROM metro_config_history ORDER BY version DESC LIMIT %s', (limit,))
+                return [{'version': r[0], 'updated_at': r[1], 'changed_by': r[2], 'payload': r[3]} for r in cur.fetchall()]
+    with _sqlite_connection() as db:
+        rows = db.execute('SELECT version,updated_at,changed_by,payload FROM metro_config_history ORDER BY version DESC LIMIT ?', (limit,)).fetchall()
+    return [{'version': r[0], 'updated_at': r[1], 'changed_by': r[2], 'payload': json.loads(r[3])} for r in rows]
