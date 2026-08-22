@@ -12,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -147,7 +148,14 @@ public class MainActivityV4 extends Activity {
         else countdownText.setText("Time until last train: "+(diff/3600000)+"h "+((diff/60000)%60)+"m");
     }
 
-    private final Runnable tick=()->{ if(countdownText!=null){updateCountdown();handler.postDelayed(tick,1000);} };
+    private final Runnable tick = new Runnable() {
+        @Override public void run() {
+            if (countdownText != null) {
+                updateCountdown();
+                handler.postDelayed(this, 1000);
+            }
+        }
+    };
 
     private void swap(){ int a=fromSpinner.getSelectedItemPosition(), b=toSpinner.getSelectedItemPosition(); fromSpinner.setSelection(b); toSpinner.setSelection(a); refreshInfo(); }
     private void startTrip(){Toast.makeText(this,"Trip started from "+fromSpinner.getSelectedItem()+" to "+toSpinner.getSelectedItem(),Toast.LENGTH_SHORT).show();}
