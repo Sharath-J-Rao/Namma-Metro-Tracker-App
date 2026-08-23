@@ -2,13 +2,20 @@ plugins { id 'com.android.application' }
 
 android {
     namespace 'com.namma.metrotracker'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId 'com.namma.metrotracker'
         minSdk 24
-        targetSdk 35
-        versionCode 84
-        versionName '8.4.0'
+        targetSdk 36
+        versionCode 85
+        versionName '8.5.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+        }
     }
 }
