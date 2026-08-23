@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: namma-metro-admin
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: starter
+    envVars:
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: metro-data
+      mountPath: /app/data
+      sizeGB: 1
